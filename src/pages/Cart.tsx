@@ -1,165 +1,179 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Icon from '@/components/ui/icon';
+import { useCart } from '@/hooks/useCart';
+import { useFavorites } from '@/hooks/useFavorites';
+import { toast } from 'sonner';
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'iPhone 15 Pro Max', brand: 'Apple', price: 129990, quantity: 1, image: 'https://images.unsplash.com/photo-1678652197831-2d180705cd2c?w=200&h=200&fit=crop' },
-    { id: 2, name: 'MacBook Pro 14"', brand: 'Apple', price: 189990, quantity: 1, image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=200&h=200&fit=crop' },
-    { id: 3, name: 'iPad Air', brand: 'Apple', price: 64990, quantity: 2, image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop' },
-  ]);
+  const { items, updateQuantity, removeItem, getTotalPrice, clearCart, getTotalItems } = useCart();
+  const cartCount = getTotalItems();
+  const favoritesCount = useFavorites(state => state.items.length);
+  const totalPrice = getTotalPrice();
 
-  const updateQuantity = (id: number, delta: number) => {
-    setCartItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-      )
+  const handleQuantityChange = (productId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    updateQuantity(productId, newQuantity);
+  };
+
+  const handleRemove = (productId: string) => {
+    removeItem(productId);
+    toast.success('Товар удален из корзины');
+  };
+
+  const handleCheckout = () => {
+    toast.success('Оформление заказа в разработке');
+  };
+
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header cartCount={cartCount} favoritesCount={favoritesCount} />
+        
+        <div className="flex-1 container py-16 flex flex-col items-center justify-center text-center">
+          <Icon name="ShoppingCart" className="h-24 w-24 text-muted-foreground mb-4" />
+          <h1 className="text-3xl font-bold mb-2">Корзина пуста</h1>
+          <p className="text-muted-foreground mb-8">
+            Добавьте товары из каталога, чтобы оформить заказ
+          </p>
+          <Button size="lg" asChild>
+            <Link to="/catalog">
+              <Icon name="ShoppingBag" className="mr-2 h-5 w-5" />
+              Перейти в каталог
+            </Link>
+          </Button>
+        </div>
+
+        <Footer />
+      </div>
     );
-  };
-
-  const removeItem = (id: number) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const delivery = subtotal > 5000 ? 0 : 500;
-  const total = subtotal + delivery;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col dark">
-      <Header />
-      
-      <main className="flex-1">
-        <div className="bg-gradient-to-r from-primary/20 to-secondary/20 py-12">
-          <div className="container">
-            <h1 className="font-heading text-4xl font-bold mb-4">Корзина</h1>
-            <p className="text-muted-foreground">{cartItems.length} товара в корзине</p>
+    <div className="min-h-screen flex flex-col">
+      <Header cartCount={cartCount} favoritesCount={favoritesCount} />
+
+      <div className="flex-1 container py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-4xl font-bold">Корзина</h1>
+          <Button variant="ghost" onClick={clearCart}>
+            <Icon name="Trash2" className="mr-2 h-4 w-4" />
+            Очистить корзину
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-4">
+            {items.map(item => (
+              <Card key={item.id} className="p-4">
+                <div className="flex gap-4">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="h-24 w-24 rounded-md object-cover"
+                  />
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">{item.brand}</p>
+                        <h3 className="font-semibold">{item.name}</h3>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemove(item.id)}
+                      >
+                        <Icon name="X" className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 border rounded-md">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Icon name="Minus" className="h-4 w-4" />
+                        </Button>
+                        <span className="w-12 text-center font-medium">{item.quantity}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        >
+                          <Icon name="Plus" className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xl font-bold">
+                          {(item.price * item.quantity).toLocaleString('ru-RU')} ₽
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.price.toLocaleString('ru-RU')} ₽ за шт.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="lg:col-span-1">
+            <Card className="p-6 space-y-4 sticky top-20">
+              <h2 className="text-xl font-bold">Итого</h2>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Товары ({items.length})</span>
+                  <span>{totalPrice.toLocaleString('ru-RU')} ₽</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Доставка</span>
+                  <span className="text-green-600 font-medium">Бесплатно</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-between text-lg font-bold">
+                <span>К оплате</span>
+                <span>{totalPrice.toLocaleString('ru-RU')} ₽</span>
+              </div>
+
+              <Button className="w-full" size="lg" onClick={handleCheckout}>
+                <Icon name="CreditCard" className="mr-2 h-5 w-5" />
+                Оформить заказ
+              </Button>
+
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Icon name="Truck" className="h-4 w-4" />
+                  <span>Бесплатная доставка от 5000 ₽</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon name="ShieldCheck" className="h-4 w-4" />
+                  <span>Официальная гарантия</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon name="RotateCcw" className="h-4 w-4" />
+                  <span>Возврат в течение 14 дней</span>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
-
-        <div className="container py-8">
-          {cartItems.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Icon name="ShoppingCart" size={64} className="mx-auto mb-4 text-muted-foreground" />
-              <h2 className="font-heading text-2xl font-bold mb-2">Корзина пуста</h2>
-              <p className="text-muted-foreground mb-6">Добавьте товары из каталога</p>
-              <Button>Перейти в каталог</Button>
-            </Card>
-          ) : (
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-4">
-                {cartItems.map((item) => (
-                  <Card key={item.id} className="animate-fade-in">
-                    <CardContent className="p-6">
-                      <div className="flex gap-6">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
-                        <div className="flex-1 space-y-3">
-                          <div>
-                            <p className="text-sm text-muted-foreground">{item.brand}</p>
-                            <h3 className="font-heading font-semibold text-lg">{item.name}</h3>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8"
-                                onClick={() => updateQuantity(item.id, -1)}
-                              >
-                                <Icon name="Minus" size={14} />
-                              </Button>
-                              <span className="font-medium w-8 text-center">{item.quantity}</span>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8"
-                                onClick={() => updateQuantity(item.id, 1)}
-                              >
-                                <Icon name="Plus" size={14} />
-                              </Button>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-heading font-bold text-xl">
-                                {(item.price * item.quantity).toLocaleString('ru-RU')} ₽
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {item.price.toLocaleString('ru-RU')} ₽ за шт.
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => removeItem(item.id)}
-                          >
-                            <Icon name="Trash2" size={16} className="mr-2" />
-                            Удалить
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <Card className="sticky top-20">
-                  <CardContent className="p-6 space-y-4">
-                    <h2 className="font-heading font-bold text-xl">Итого</h2>
-                    <Separator />
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Товары ({cartItems.length})</span>
-                        <span className="font-medium">{subtotal.toLocaleString('ru-RU')} ₽</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Доставка</span>
-                        <span className="font-medium">
-                          {delivery === 0 ? 'Бесплатно' : `${delivery} ₽`}
-                        </span>
-                      </div>
-                      {delivery > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          До бесплатной доставки: {(5000 - subtotal).toLocaleString('ru-RU')} ₽
-                        </p>
-                      )}
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-xl font-heading font-bold">
-                      <span>Всего</span>
-                      <span>{total.toLocaleString('ru-RU')} ₽</span>
-                    </div>
-                    <Button className="w-full bg-primary hover:bg-primary/90 h-12 text-lg">
-                      Оформить заказ
-                      <Icon name="ArrowRight" size={20} className="ml-2" />
-                    </Button>
-                    <div className="space-y-2 pt-4">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Icon name="Shield" size={16} className="mr-2" />
-                        Безопасная оплата
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Icon name="Truck" size={16} className="mr-2" />
-                        Доставка 1-3 дня
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
+      </div>
 
       <Footer />
     </div>
